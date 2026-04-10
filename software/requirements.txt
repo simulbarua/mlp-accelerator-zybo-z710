@@ -1,0 +1,9 @@
+# MLP Accelerator – Software / AI Training Dependencies
+# Python >= 3.9 recommended
+
+# Deep learning framework (CPU-only; replace with torch+cu118 wheel for CUDA)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Numerical computing (used for quantization and COE export)
+numpy>=1.24.0

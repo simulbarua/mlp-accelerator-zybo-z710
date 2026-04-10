@@ -1,0 +1,44 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── ML Training Artifacts ─────────────────────────────────────────────────────
+software/data/          # MNIST dataset (downloaded at runtime)
+software/weights/       # Saved model checkpoints
+
+# ── Generated COE files (committed intentionally when ready) ──────────────────
+# Uncomment below to ignore them during development:
+# software/coe_files/
+
+# ── LaTeX build artifacts ─────────────────────────────────────────────────────
+proposal/*.log
+proposal/*.synctex.gz
+proposal/*.aux
+proposal/*.out
+proposal/*.toc
+proposal/*.fls
+proposal/*.fdb_latexmk
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
