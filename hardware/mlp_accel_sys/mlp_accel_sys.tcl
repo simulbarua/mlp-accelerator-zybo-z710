@@ -146,7 +146,22 @@ if { [file isdirectory $local_board_path] } {
   set_param board.repoPaths [list $local_board_path]
 }
 
-create_project ${_xil_proj_name_} ${origin_dir}/${_xil_proj_name_} -part xc7z010clg400-1 -force
+# Clean only Vivado-generated artifacts — never touches .srcs/, .hw/, app_component/, etc.
+foreach _cleanup_item [list \
+  "${origin_dir}/${_xil_proj_name_}.xpr" \
+  "${origin_dir}/${_xil_proj_name_}.cache" \
+  "${origin_dir}/${_xil_proj_name_}.gen" \
+  "${origin_dir}/${_xil_proj_name_}.ip_user_files" \
+  "${origin_dir}/${_xil_proj_name_}.runs" \
+  "${origin_dir}/${_xil_proj_name_}.sim" \
+  "${origin_dir}/${_xil_proj_name_}.tmp" \
+] {
+  if { [file exists $_cleanup_item] } {
+    file delete -force $_cleanup_item
+  }
+}
+
+create_project ${_xil_proj_name_} ${origin_dir} -part xc7z010clg400-1
 
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]
