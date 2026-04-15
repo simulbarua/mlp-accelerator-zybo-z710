@@ -53,11 +53,6 @@ software/data/
 #   Generate Block Design → Run Synthesis → Run Implementation → Generate Bitstream
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Project file and block design — fully recreated by mlp_accel_sys.tcl
-hardware/mlp_accel_sys/*.xpr
-hardware/mlp_accel_sys/*.srcs/sources_1/bd/
-hardware/mlp_accel_sys/*.srcs/sources_1/imports/
-
 # IP output products and cache
 hardware/mlp_accel_sys/*.cache/
 hardware/mlp_accel_sys/*.gen/

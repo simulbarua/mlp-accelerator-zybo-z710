@@ -150,23 +150,17 @@ The Digilent board definition is not bundled with Vivado and must be installed o
 
 You only need to do this once per Vivado installation.
 
-### 4 — Vivado: recreate the project and generate the bitstream
+### 4 — Vivado: open the project and generate the bitstream
 
 > Skip this step if you are using the committed `.xsa` and have not changed the hardware.
 
-The project is recreated from the TCL script (the `.xpr` and block design files
-are not stored in git — the script regenerates them).
-
 1. Open Vivado 2025.2.1 (after restarting from step 3 above)
-2. In the **Tcl Console**, source the script using its full path — use forward slashes even on Windows:
-   ```tcl
-   source C:/path/to/mlp-accelerator-zybo-z710/hardware/mlp_accel_sys/mlp_accel_sys.tcl
-   ```
-   This creates the project inside `hardware/mlp_accel_sys/mlp_accel_sys/` (a gitignored subdirectory).
-3. Open the generated project: **File → Open Project** → `hardware/mlp_accel_sys/mlp_accel_sys/mlp_accel_sys.xpr`
-4. If prompted to upgrade IPs, click **Upgrade All**
-5. **Run Synthesis → Run Implementation → Generate Bitstream**
-6. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
+2. **File → Open Project** → select `hardware/mlp_accel_sys/mlp_accel_sys.xpr`
+3. In the **Reports** menu → **Report IP Status** → click **Upgrade All**
+4. Right-click the block design in Sources → **Generate Output Products**
+5. Right-click the block design → **Create HDL Wrapper** → **Let Vivado manage**
+6. **Run Synthesis → Run Implementation → Generate Bitstream**
+7. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
 
 ### 5 — Vitis: build and run the application
 
