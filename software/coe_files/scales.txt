@@ -1,0 +1,11 @@
+input_scale=0.02221643
+input_mean=0.13070000
+input_std=0.30810000
+req_shift_fc1=11
+req_shift_fc2=8
+fc1_weight_scale=0.00441922
+fc1_bias_scale=0.00009818
+fc2_weight_scale=0.00473907
+fc2_bias_scale=0.00079055
+fc3_weight_scale=0.00482744
+fc3_bias_scale=0.00091863

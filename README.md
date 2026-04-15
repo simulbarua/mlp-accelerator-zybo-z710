@@ -6,15 +6,46 @@ An end-to-end implementation of a Multi-Layer Perceptron (MLP) hardware accelera
 
 ---
 
-## Architecture
+## Network Architecture
 
 ```
 Input (784)  →  FC1 (64, ReLU)  →  FC2 (32, ReLU)  →  FC3 (10, argmax)
 ```
 
 - **Dataset:** MNIST (60k train / 10k test)
-- **Quantization:** Symmetric 8-bit post-training quantization (per-layer)
-- **Target:** Zynq-7010 PL fabric, controlled via PS over AXI
+- **Quantization:** Symmetric INT8 post-training quantization (per-layer)
+- **Target:** Zynq-7010 PL fabric, controlled by PS Cortex-A9 over AXI
+- **PL clock:** 100 MHz (FCLK_CLK0 from PS)
+
+---
+
+## System Architecture
+
+```
+Zynq PS (ARM Cortex-A9)
+   │  M_AXI_GP0
+   ▼
+AXI SmartConnect (1 master → 3 slaves)
+   │
+   ├──► AXI BRAM Ctrl 0  ──► BMG 0 Port A (32-bit AXI write)
+   │    0x4000_0000 64 KB     BMG 0 Port B (8-bit) ──► mlp_engine param port
+   │                          [Param BRAM: INT8 weights + INT32 biases]
+   │
+   ├──► AXI BRAM Ctrl 1  ──► BMG 1 Port A (32-bit AXI write)
+   │    0x4001_0000  4 KB     BMG 1 Port B (8-bit) ──► mlp_engine input port
+   │                          [Input BRAM: 784 INT8 pixel bytes]
+   │
+   └──► mlp_top AXI-Lite  ──► axilite_ctrl  (CTRL / STATUS / RESULT regs)
+        0x4002_0000  4 KB     mlp_engine     (serial MAC FSM, INT32 accum)
+```
+
+### Inference flow
+
+1. PS writes INT8 weights + INT32 biases to Param BRAM via `mlp_bram_init()`
+2. PS normalizes and writes 784 INT8 pixels to Input BRAM
+3. PS writes `0x1` to CTRL register to start inference
+4. PS polls STATUS register until done bit is set
+5. PS reads 4-bit predicted class from RESULT register
 
 ---
 
@@ -22,65 +53,171 @@ Input (784)  →  FC1 (64, ReLU)  →  FC2 (32, ReLU)  →  FC3 (10, argmax)
 
 ```
 mlp_accelerator_zybo_z710/
-├── proposal/               # Project proposal (LaTeX source + PDF)
-├── software/               # Phase 1 — Model training & weight export
-│   ├── train_and_export.py # Train MLP, quantize, and export .coe files
-│   └── requirements.txt    # Python dependencies
-└── hardware/               # Phase 2 — RTL accelerator (Vivado project)
-    └── (in progress)
+├── hardware/
+│   ├── rtl/                        # Canonical RTL (single source of truth)
+│   │   ├── mlp_top.v               # Top-level: AXI-Lite + BRAM port wrapper
+│   │   ├── mlp_engine.v            # Serial MAC inference FSM
+│   │   ├── axilite_ctrl.v          # AXI4-Lite slave (ctrl/status/result regs)
+│   │   └── mlp_params.vh           # Network constants (auto-generated)
+│   ├── firmware/                   # Canonical C application source
+│   │   ├── main.c                  # Top-level: init, load, infer, cleanup
+│   │   ├── mlp_bram_init.c/.h      # BRAM loader + readback check
+│   │   └── weights_biases.h        # Packed weight arrays (auto-generated)
+│   └── mlp_accel_sys/              # Vivado project + Vitis workspace
+│       ├── mlp_accel_sys.xpr       # Vivado project file  ← open this
+│       ├── mlp_accel_sys.srcs/     # Block design, IP XCI, constraints, RTL
+│       ├── mlp_accel_sys.hw/       # Exported hardware (.lpr + .xsa)
+│       ├── mlp_system_wrapper.xsa  # Hardware export for Vitis
+│       ├── app_component/src/      # Vitis C sources (compiled by Vitis)
+│       └── platform/               # Vitis platform definition
+├── software/                       # Python training pipeline
+│   ├── train_and_export_mlp.py     # Train → quantize → export weights_biases.h
+│   ├── infer_image.py              # Run inference on a saved image
+│   ├── collect_sample_images.py    # Save sample MNIST images to disk
+│   ├── requirements.txt            # Python dependencies
+│   └── coe_files/                  # Generated Vivado BRAM init files
+├── docs/
+│   └── project_proposal.pdf            # Project proposal (tracked in git)
+└── constraints/
+    └── zybo_z710_mlp.xdc           # Board pin/timing constraints
 ```
 
 ---
 
-## Software (Phase 1)
+## Prerequisites
 
-### Setup
+| Tool | Version | Notes |
+|---|---|---|
+| Vivado + Vitis | 2025.2 or later | Unified installer from AMD |
+| Python | 3.10 + | 3.14 used during development |
+| PyTorch | 2.11+ | GPU not required |
+| Digilent Zybo Z7-10 board | — | XC7Z010-1CLG400C |
+| USB-UART driver | — | Needed for serial console |
+
+---
+
+## Setup
+
+### 1 — Clone the repository
+
+```bash
+git clone <repo-url>
+cd mlp_accelerator_zybo_z710
+```
+
+### 2 — Python environment (model training & weight export)
 
 ```bash
 cd software
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Train and Export
+Train the model and export the weight header used by the firmware:
 
 ```bash
-python train_and_export.py
+python train_and_export_mlp.py
 ```
 
 This will:
-1. Download MNIST into `software/data/`
-2. Train the MLP for 20 epochs (targeting ≥ 95% test accuracy)
-3. Save the best checkpoint to `software/weights/mlp_best.pth`
-4. Quantize all FC layer weights/biases to INT8
-5. Export Vivado-ready `.coe` files to `software/coe_files/`
-6. Run a fixed-point simulation to verify quantized accuracy ≥ 94%
+1. Download MNIST into `software/data/` (first run only)
+2. Train the MLP for up to 20 epochs (targets ≥ 95% test accuracy)
+3. Save the best checkpoint to `software/weights_and_biases/mlp_best.pth`
+4. Quantize all FC layers to INT8
+5. Write `hardware/firmware/weights_biases.h` — the packed C array header
+6. Write `hardware/rtl/mlp_params.vh` — Verilog network-dimension constants
+7. Write `.coe` files to `software/coe_files/` for optional BRAM init in Vivado
 
-### Output Files
+Copy the generated header into the Vitis application source before building:
 
-| File | Description |
-|------|-------------|
-| `coe_files/fc1_weights.coe` | FC1 weight BRAM init (64×784 INT8) |
-| `coe_files/fc1_bias.coe` | FC1 bias BRAM init (64 INT8) |
-| `coe_files/fc2_weights.coe` | FC2 weight BRAM init (32×64 INT8) |
-| `coe_files/fc2_bias.coe` | FC2 bias BRAM init (32 INT8) |
-| `coe_files/fc3_weights.coe` | FC3 weight BRAM init (10×32 INT8) |
-| `coe_files/fc3_bias.coe` | FC3 bias BRAM init (10 INT8) |
-| `coe_files/scales.txt` | Per-layer scale factors for PS-side dequantization |
+```bash
+cp hardware/firmware/weights_biases.h \
+   hardware/mlp_accel_sys/app_component/src/weights_biases.h
+```
+
+### 3 — Vivado: open the project and generate the bitstream
+
+> Skip this step if you are using the committed `.xsa` and bitstream and have not changed the hardware.
+
+1. Open Vivado 2025.2
+2. **File → Open Project** → select `hardware/mlp_accel_sys/mlp_accel_sys.xpr`
+3. If prompted to upgrade IPs, click **Upgrade All**
+4. In the Flow Navigator: **Generate Block Design** (if BD sources changed)
+5. **Run Synthesis → Run Implementation → Generate Bitstream**
+6. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
+
+### 4 — Vitis: build and run the application
+
+1. Open Vitis 2025.2 unified IDE
+2. **File → Open Workspace** → select `hardware/mlp_accel_sys/` as the workspace root
+3. If prompted, update the hardware platform:
+   - Right-click the **platform** component → **Update Hardware Specification**
+   - Point to `hardware/mlp_accel_sys/mlp_system_wrapper.xsa`
+   - Right-click platform → **Build**
+4. Right-click **app_component** → **Build**
+5. Connect the Zybo Z7-10 over USB
+6. Open a serial terminal (115200 baud, 8N1) on the board's USB-UART port
+7. **Run → Run As → Launch Hardware**
+
+### 5 — Expected serial output
+
+```
+initialize_device: zeroing Param BRAM...
+initialize_device: zeroing Input BRAM...
+initialize_device: done.
+Loading MLP parameters into BRAM...
+mlp_bram_init: all parameter blocks written.
+mlp_bram_readback_check:
+  FC1 weights: PASS (0x????????)
+  FC1 biases : PASS (0x????????)
+  FC2 weights: PASS (0x????????)
+  FC2 biases : PASS (0x????????)
+  FC3 weights: PASS (0x????????)
+  FC3 biases : PASS (0x????????)
+  Overall: PASS
+BRAM loaded OK.
+Predicted class: <digit>
+cleanup_device: done.
+```
 
 ---
 
-## Hardware (Phase 2)
+## AXI Address Map
 
-Vivado RTL design targeting the Zynq-7010 PL. Coming soon.
+| Peripheral | Base | Size | Purpose |
+|---|---|---|---|
+| AXI BRAM Ctrl 0 (Param BRAM) | `0x4000_0000` | 64 KB | Weights + biases |
+| AXI BRAM Ctrl 1 (Input BRAM) | `0x4001_0000` | 4 KB | 784 input pixels |
+| mlp_top AXI-Lite | `0x4002_0000` | 4 KB | CTRL / STATUS / RESULT |
+
+### AXI-Lite register map
+
+| Offset | Name | Access | Description |
+|---|---|---|---|
+| `0x00` | CTRL | W | Write `0x1` to start inference |
+| `0x04` | STATUS | R | Bit 0: done flag (read-to-clear) |
+| `0x08` | RESULT | R | Bits [3:0]: predicted class (0–9) |
+
+---
+
+## Param BRAM layout
+
+| Block | Offset | Size | Format |
+|---|---|---|---|
+| FC1 weights | `0x0000` | 12 544 words | INT8, 4 per word, little-endian |
+| FC1 biases | `0xC400` | 64 words | INT32, 1 per word |
+| FC2 weights | `0xC500` | 512 words | INT8, 4 per word |
+| FC2 biases | `0xCD00` | 32 words | INT32, 1 per word |
+| FC3 weights | `0xCD80` | 80 words | INT8, 4 per word |
+| FC3 biases | `0xCEC0` | 10 words | INT32, 1 per word |
 
 ---
 
 ## Team
 
 | # | Name | Student ID |
-|---|------|-----------|
+|---|---|---|
 | 1 | Simul Barua | 018315661 |
 | 2 | Sriram Sridhar | 016661411 |
 | 3 | Manisha Varthamanan | 020095920 |
