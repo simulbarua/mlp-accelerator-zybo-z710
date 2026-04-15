@@ -146,7 +146,7 @@ if { [file isdirectory $local_board_path] } {
   set_param board.repoPaths [list $local_board_path]
 }
 
-create_project ${_xil_proj_name_} ${origin_dir} -part xc7z010clg400-1 -force
+create_project ${_xil_proj_name_} ${origin_dir}/${_xil_proj_name_} -part xc7z010clg400-1 -force
 
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]

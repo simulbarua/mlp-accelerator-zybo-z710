@@ -158,12 +158,11 @@ The project is recreated from the TCL script (the `.xpr` and block design files
 are not stored in git — the script regenerates them).
 
 1. Open Vivado 2025.2.1 (after restarting from step 3 above)
-2. In the **Tcl Console**, navigate to the project directory and source the script — use forward slashes even on Windows:
+2. In the **Tcl Console**, source the script using its full path — use forward slashes even on Windows:
    ```tcl
-   cd C:/path/to/mlp-accelerator-zybo-z710/hardware/mlp_accel_sys
-   source mlp_accel_sys.tcl
+   source C:/path/to/mlp-accelerator-zybo-z710/hardware/mlp_accel_sys/mlp_accel_sys.tcl
    ```
-   This creates `mlp_accel_sys.xpr`, the block design, and all IP configuration.
+   This creates the project inside `hardware/mlp_accel_sys/mlp_accel_sys/` (a gitignored subdirectory).
 3. Open the generated project: **File → Open Project** → `hardware/mlp_accel_sys/mlp_accel_sys/mlp_accel_sys.xpr`
 4. If prompted to upgrade IPs, click **Upgrade All**
 5. **Run Synthesis → Run Implementation → Generate Bitstream**
