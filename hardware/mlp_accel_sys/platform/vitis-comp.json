@@ -3,7 +3,7 @@
   "type": "PLATFORM",
   "configuration": {
     "description": "",
-    "xsa": "C:/Users/simulbarua/Documents/ZyboProjects/mlp_accel_sys_v1.0/mlp_system_wrapper.xsa",
+    "xsa": "../mlp_system_wrapper.xsa",
     "xsaPathInPlatform": "platform/hw/mlp_system_wrapper.xsa",
     "emulationXsa": "",
     "emulationXsaPathInPlatform": "",
@@ -57,7 +57,7 @@
         "qemuData": "resources/zynq_fsbl/qemu",
         "qemuArgsFile": "resources/zynq_fsbl/qemu/qemu_args.txt",
         "pmcQemuArgsFile": "",
-        "isBSPGenReq": false
+        "isBSPGenReq": true
       },
       {
         "name": "standalone_ps7_cortexa9_0",
@@ -71,7 +71,7 @@
         "qemuData": "resources/standalone_ps7_cortexa9_0/qemu",
         "qemuArgsFile": "resources/standalone_ps7_cortexa9_0/qemu/qemu_args.txt",
         "pmcQemuArgsFile": "",
-        "isBSPGenReq": false
+        "isBSPGenReq": true
       }
     ],
     "emptyToolchainConfiguration": []
