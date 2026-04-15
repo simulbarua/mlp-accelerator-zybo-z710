@@ -136,23 +136,25 @@ cp hardware/firmware/weights_biases.h \
    hardware/mlp_accel_sys/app_component/src/weights_biases.h
 ```
 
-### 3 — Vivado: open the project and generate the bitstream
+### 3 — Vivado: recreate the project and generate the bitstream
 
-> Skip this step if you are using the committed `.xsa` and bitstream and have not changed the hardware.
+> Skip this step if you are using the committed `.xsa` and have not changed the hardware.
 
-1. Open Vivado 2025.2
-2. **File → Open Project** → select `hardware/mlp_accel_sys/mlp_accel_sys.xpr`
-3. If prompted to upgrade IPs, click **Upgrade All**
-4. **Regenerate the block design wrapper** (required on first open — the wrapper is
-   generated and not stored in git):
-   - In the Sources panel → Design Sources → right-click **`mlp_system`** →
-     **"Generate HDL Wrapper"**
-   - Select **"Let Vivado manage wrapper and auto-update"** → OK
-   - If Vivado asks about an invalid top module on open, choose
-     **"Automatically pick new top module"** first, then do the step above
-5. In the Flow Navigator: **Generate Block Design**
-6. **Run Synthesis → Run Implementation → Generate Bitstream**
-7. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
+The project is recreated from the TCL script (the `.xpr` and block design files
+are not stored in git — the script regenerates them).
+
+1. Open the **Vivado Tcl Shell** (not the GUI)
+2. Navigate to the project directory and source the script:
+   ```tcl
+   cd {C:/path/to/mlp_accelerator_zybo_z710/hardware/mlp_accel_sys}
+   source mlp_accel_sys.tcl
+   ```
+   This creates `mlp_accel_sys.xpr`, the block design, and all IP configuration.
+3. Open the generated project in Vivado GUI:
+   **File → Open Project** → `hardware/mlp_accel_sys/mlp_accel_sys.xpr`
+4. If prompted to upgrade IPs, click **Upgrade All**
+5. **Run Synthesis → Run Implementation → Generate Bitstream**
+6. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
 
 ### 4 — Vitis: build and run the application
 
