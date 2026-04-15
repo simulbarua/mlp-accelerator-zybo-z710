@@ -143,9 +143,16 @@ cp hardware/firmware/weights_biases.h \
 1. Open Vivado 2025.2
 2. **File → Open Project** → select `hardware/mlp_accel_sys/mlp_accel_sys.xpr`
 3. If prompted to upgrade IPs, click **Upgrade All**
-4. In the Flow Navigator: **Generate Block Design** (if BD sources changed)
-5. **Run Synthesis → Run Implementation → Generate Bitstream**
-6. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
+4. **Regenerate the block design wrapper** (required on first open — the wrapper is
+   generated and not stored in git):
+   - In the Sources panel → Design Sources → right-click **`mlp_system`** →
+     **"Generate HDL Wrapper"**
+   - Select **"Let Vivado manage wrapper and auto-update"** → OK
+   - If Vivado asks about an invalid top module on open, choose
+     **"Automatically pick new top module"** first, then do the step above
+5. In the Flow Navigator: **Generate Block Design**
+6. **Run Synthesis → Run Implementation → Generate Bitstream**
+7. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
 
 ### 4 — Vitis: build and run the application
 
