@@ -146,7 +146,7 @@ if { [file isdirectory $local_board_path] } {
   set_param board.repoPaths [list $local_board_path]
 }
 
-# Clean only Vivado-generated artifacts — never touches .srcs/, .hw/, app_component/, etc.
+# Delete generated Vivado artifacts from a previous run
 foreach _cleanup_item [list \
   "${origin_dir}/${_xil_proj_name_}.xpr" \
   "${origin_dir}/${_xil_proj_name_}.cache" \
@@ -161,7 +161,26 @@ foreach _cleanup_item [list \
   }
 }
 
+# Vivado treats any existing <name>.srcs / <name>.hw as a sign a project already
+# exists and refuses to create here. Temporarily rename them out of the way so
+# create_project succeeds, then restore them immediately after.
+foreach _protected [list ".srcs" ".hw"] {
+  set _src "${origin_dir}/${_xil_proj_name_}${_protected}"
+  set _bak "${origin_dir}/${_xil_proj_name_}${_protected}.bak"
+  if { [file exists $_src] } { file rename $_src $_bak }
+}
+
 create_project ${_xil_proj_name_} ${origin_dir} -part xc7z010clg400-1
+
+# Restore protected directories (replace any empty ones Vivado just created)
+foreach _protected [list ".srcs" ".hw"] {
+  set _src "${origin_dir}/${_xil_proj_name_}${_protected}"
+  set _bak "${origin_dir}/${_xil_proj_name_}${_protected}.bak"
+  if { [file exists $_bak] } {
+    if { [file exists $_src] } { file delete -force $_src }
+    file rename $_bak $_src
+  }
+}
 
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]
