@@ -88,7 +88,7 @@ mlp_accelerator_zybo_z710/
 
 | Tool | Version | Notes |
 |---|---|---|
-| Vivado + Vitis | 2025.2 or later | Unified installer from AMD |
+| Vivado + Vitis | 2025.2.1 | Unified installer from AMD — use the unified Vitis IDE, not classic |
 | Python | 3.10 + | 3.14 used during development |
 | PyTorch | 2.11+ | GPU not required |
 | Digilent Zybo Z7-10 board | — | XC7Z010-1CLG400C |
@@ -136,43 +136,56 @@ cp hardware/firmware/weights_biases.h \
    hardware/mlp_accel_sys/app_component/src/weights_biases.h
 ```
 
-### 3 — Vivado: recreate the project and generate the bitstream
+### 3 — Install the Zybo Z7-10 board files (first time only)
+
+The Digilent board definition is not bundled with Vivado and must be installed once before recreating the project.
+
+1. Open Vivado 2025.2.1 (no project needed — just the welcome screen)
+2. In the **Tcl Console** at the bottom, run:
+   ```tcl
+   xhub::refresh_catalog [xhub::get_xstores xilinx_board_store]
+   xhub::install [xhub::get_xitems digilentinc.com:xilinx_board_store:zybo-z7-10:1.1]
+   ```
+3. **Close and restart Vivado completely** — board files are only picked up on startup
+
+You only need to do this once per Vivado installation.
+
+### 4 — Vivado: recreate the project and generate the bitstream
 
 > Skip this step if you are using the committed `.xsa` and have not changed the hardware.
 
 The project is recreated from the TCL script (the `.xpr` and block design files
 are not stored in git — the script regenerates them).
 
-1. Open the **Vivado Tcl Shell** (not the GUI)
-2. Navigate to the project directory and source the script:
+1. Open Vivado 2025.2.1 (after restarting from step 3 above)
+2. In the **Tcl Console**, navigate to the project directory and source the script — use forward slashes even on Windows:
    ```tcl
-   # Windows example (use forward slashes):
-   cd {C:/path/to/mlp_accelerator_zybo_z710/hardware/mlp_accel_sys}
-   # Linux / macOS example:
-   # cd /path/to/mlp_accelerator_zybo_z710/hardware/mlp_accel_sys
+   cd C:/path/to/mlp-accelerator-zybo-z710/hardware/mlp_accel_sys
    source mlp_accel_sys.tcl
    ```
    This creates `mlp_accel_sys.xpr`, the block design, and all IP configuration.
-3. Open the generated project in Vivado GUI:
-   **File → Open Project** → `hardware/mlp_accel_sys/mlp_accel_sys.xpr`
+3. Open the generated project: **File → Open Project** → `hardware/mlp_accel_sys/mlp_accel_sys/mlp_accel_sys.xpr`
 4. If prompted to upgrade IPs, click **Upgrade All**
 5. **Run Synthesis → Run Implementation → Generate Bitstream**
 6. When complete: **File → Export → Export Hardware** (check *Include bitstream*) → overwrite `mlp_system_wrapper.xsa`
 
-### 4 — Vitis: build and run the application
+### 5 — Vitis: build and run the application
 
-1. Open Vitis 2025.2 unified IDE
-2. **File → Open Workspace** → select `hardware/mlp_accel_sys/` as the workspace root
-3. If prompted, update the hardware platform:
-   - Right-click the **platform** component → **Update Hardware Specification**
-   - Point to `hardware/mlp_accel_sys/mlp_system_wrapper.xsa`
-   - Right-click platform → **Build**
-4. Right-click **app_component** → **Build**
-5. Connect the Zybo Z7-10 over USB
-6. Open a serial terminal (115200 baud, 8N1) on the board's USB-UART port
-7. **Run → Run As → Launch Hardware**
+1. Open **Vitis 2025.2.1** (the unified IDE, not the classic IDE)
+2. When prompted for a workspace, select the `hardware/mlp_accel_sys/` folder and click **Launch**
+3. Create the platform component from scratch (required on first clone):
+   - Go to **File → New Component → Platform**
+   - Set **Component name** to exactly `platform`
+   - Set **Component location** to `hardware/mlp_accel_sys/`
+   - Under **Hardware Design**, browse to `hardware/mlp_accel_sys/mlp_system_wrapper.xsa` → **Next**
+   - Leave OS as **standalone**, processor as **ps7_cortexa9_0** → **Finish**
+4. In the Flow Navigator under **PLATFORM**, click **Build** — wait for it to complete
+5. In the Flow Navigator under **APPLICATION**, select **app_component** → click **Build**
+6. Connect the Zybo Z7-10 over USB
+7. Open a serial terminal at **115200 baud, 8N1** on the board's USB-UART port
+8. In the Flow Navigator click **Run** → **Launch Hardware (Single Application Debug)**
 
-### 5 — Expected serial output
+### 6 — Expected serial output
 
 ```
 initialize_device: zeroing Param BRAM...
@@ -219,20 +232,4 @@ cleanup_device: done.
 |---|---|---|---|
 | FC1 weights | `0x0000` | 12 544 words | INT8, 4 per word, little-endian |
 | FC1 biases | `0xC400` | 64 words | INT32, 1 per word |
-| FC2 weights | `0xC500` | 512 words | INT8, 4 per word |
-| FC2 biases | `0xCD00` | 32 words | INT32, 1 per word |
-| FC3 weights | `0xCD80` | 80 words | INT8, 4 per word |
-| FC3 biases | `0xCEC0` | 10 words | INT32, 1 per word |
-
----
-
-## Team
-
-| # | Name | Student ID |
-|---|---|---|
-| 1 | Simul Barua | 018315661 |
-| 2 | Sriram Sridhar | 016661411 |
-| 3 | Manisha Varthamanan | 020095920 |
-| 4 | Urmi Shah | 019107595 |
-| 5 | Anusha Subramanian | 014122459 |
-| 6 | Nkono Andrew Mwase | 014224548 |
+| FC

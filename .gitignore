@@ -72,6 +72,12 @@ hardware/mlp_accel_sys/*.sim/
 # Temporary working files
 hardware/mlp_accel_sys/*.tmp/
 
+# Nested project build directory created by mlp_accel_sys.tcl
+hardware/mlp_accel_sys/mlp_accel_sys/
+
+# Vivado DFX profiling report — generated at runtime, not needed in repo
+hardware/mlp_accel_sys/dfx_runtime.txt
+
 # Hardware export run artefacts — keep only *.lpr and *.xsa
 hardware/mlp_accel_sys/*.hw/hw_1/
 hardware/mlp_accel_sys/*.hw/sdt/
@@ -120,8 +126,9 @@ hardware/mlp_accel_sys/**/version.ini
 hardware/mlp_accel_sys/**/workspace_journal*.py
 hardware/mlp_accel_sys/**/*.vitisWorkspace.json
 
-# Vitis platform — generated BSP and SDT (thousands of files, fully regenerated
-# from the XSA by Vitis on first build). Only vitis-comp.json is needed.
+# Vitis platform — all generated files. vitis-comp.json carries machine-specific
+# domain paths that break fresh clones; recreate the platform from the XSA instead.
+hardware/mlp_accel_sys/platform/vitis-comp.json
 hardware/mlp_accel_sys/platform/ps7_cortexa9_0/
 hardware/mlp_accel_sys/platform/zynq_fsbl_bsp/
 hardware/mlp_accel_sys/platform/zynq_fsbl/
@@ -152,5 +159,4 @@ docs/*.toc
 docs/*.fls
 docs/*.fdb_latexmk
 
-# proposal/ folder is merged into docs/ — ignore the remnants
-proposal/
+#

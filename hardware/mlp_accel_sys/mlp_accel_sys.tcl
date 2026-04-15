@@ -59,9 +59,12 @@ proc checkRequiredFiles { origin_dir} {
   return $status
 }
 # Set the reference directory for source file relative paths (by default the value is script directory path)
-set origin_dir "."
+# Always resolve origin_dir relative to this script's location, not the
+# working directory — this ensures source files are found regardless of
+# where the Tcl console is cd'd to when the script is sourced.
+set origin_dir [file dirname [file normalize [info script]]]
 
-# Use origin directory path location variable, if specified in the tcl shell
+# Allow explicit override if needed
 if { [info exists ::origin_dir_loc] } {
   set origin_dir $::origin_dir_loc
 }
@@ -137,7 +140,13 @@ if { $validate_required } {
 }
 
 # Create project
-create_project ${_xil_proj_name_} ./${_xil_proj_name_} -part xc7z010clg400-1
+# Add local board files repo if present in the repo, otherwise fall back to Vivado default
+set local_board_path [file normalize "$origin_dir/../../board_files"]
+if { [file isdirectory $local_board_path] } {
+  set_param board.repoPaths [list $local_board_path]
+}
+
+create_project ${_xil_proj_name_} ${origin_dir} -part xc7z010clg400-1 -force
 
 # Set the directory path for the new project
 set proj_dir [get_property directory [current_project]]
@@ -148,7 +157,12 @@ set proj_dir [get_property directory [current_project]]
 # Set project properties
 set obj [current_project]
 # board_part_repo_paths omitted — Vivado uses its default board store
-set_property -name "board_part" -value "digilentinc.com:zybo-z7-10:part0:1.1" -objects $obj
+if { [llength [get_board_parts "digilentinc.com:zybo-z7-10:part0:1.1"]] > 0 } {
+  set_property -name "board_part" -value "digilentinc.com:zybo-z7-10:part0:1.1" -objects $obj
+} else {
+  puts "WARNING: Zybo Z7-10 board definition not found. Continuing with part only (xc7z010clg400-1)."
+  puts "         Install board files from: https://github.com/Digilent/vivado-boards"
+}
 set_property -name "default_lib" -value "xil_defaultlib" -objects $obj
 set_property -name "enable_resource_estimation" -value "0" -objects $obj
 set_property -name "enable_vhdl_2008" -value "1" -objects $obj
@@ -840,12 +854,8 @@ set_property GENERATE_SYNTH_CHECKPOINT "0" [get_files mlp_system.bd ]
 set_property REGISTERED_WITH_MANAGER "1" [get_files mlp_system.bd ] 
 
 #call make_wrapper to create wrapper files
-if { [get_property IS_LOCKED [ get_files -norecurse [list mlp_system.bd]] ] == 1  } {
-  import_files -fileset sources_1 [file normalize "${origin_dir}/mlp_accel_sys.gen/sources_1/bd/mlp_system/hdl/mlp_system_wrapper.v" ]
-} else {
-  set wrapper_path [make_wrapper -fileset sources_1 -files [ get_files -norecurse [list mlp_system.bd]] -top]
-  add_files -norecurse -fileset sources_1 $wrapper_path
-}
+set wrapper_path [make_wrapper -fileset sources_1 -files [ get_files -norecurse [list mlp_system.bd]] -top]
+add_files -norecurse -fileset sources_1 $wrapper_path
 
 
 set idrFlowPropertiesConstraints ""
