@@ -64,10 +64,10 @@ mlp_accelerator_zybo_z710/
 │   │   ├── mlp_bram_init.c/.h      # BRAM loader + readback check
 │   │   └── weights_biases.h        # Packed weight arrays (auto-generated)
 │   └── mlp_accel_sys/              # Vivado project + Vitis workspace
-│       ├── mlp_accel_sys.xpr       # Vivado project file  ← open this
-│       ├── mlp_accel_sys.srcs/     # Block design, IP XCI, constraints, RTL
+│       ├── mlp_accel_sys.tcl       # Vivado rebuild script  ← source this
 │       ├── mlp_accel_sys.hw/       # Exported hardware (.lpr + .xsa)
 │       ├── mlp_system_wrapper.xsa  # Hardware export for Vitis
+│       ├── mlp_accel_sys.srcs/constrs_1/  # Board constraints XDC
 │       ├── app_component/src/      # Vitis C sources (compiled by Vitis)
 │       └── platform/               # Vitis platform definition
 ├── software/                       # Python training pipeline
@@ -146,7 +146,10 @@ are not stored in git — the script regenerates them).
 1. Open the **Vivado Tcl Shell** (not the GUI)
 2. Navigate to the project directory and source the script:
    ```tcl
+   # Windows example (use forward slashes):
    cd {C:/path/to/mlp_accelerator_zybo_z710/hardware/mlp_accel_sys}
+   # Linux / macOS example:
+   # cd /path/to/mlp_accelerator_zybo_z710/hardware/mlp_accel_sys
    source mlp_accel_sys.tcl
    ```
    This creates `mlp_accel_sys.xpr`, the block design, and all IP configuration.
